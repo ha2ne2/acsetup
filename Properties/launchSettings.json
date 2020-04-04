@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "acsetup": {
+      "commandName": "Project",
+      "workingDirectory": "\\\\wsl$\\Ubuntu\\home\\ha2ne2\\tmp\\panasonic2020"
+    }
+  }
+}
