@@ -12,7 +12,7 @@ http://tatamo.81.la/blog/2018/12/07/atcoder-cli-installation-guide/
 - atcoder-cliとonline-judge-toolsでAtCoderにログインします。  
   - $ acc login
   - $ oj login https://atcoder.jp/
-- acsetupをお好きなフォルダに展開します。
+- acsetupをビルドして好きなフォルダに設置します。C# 8がビルドできる環境が必要です（Visual Studio 2019など）。
 
 # 使い方
 
@@ -67,9 +67,9 @@ function acsetup() {
 $ acsetup ABC100
 ```
 
-# テンプレートについて
+# 出力されるテンプレートについて
 テンプレートは、acsetupと同じフォルダにあるTemplate.csを元に、置換処理が行われた後出力されます。  
-Template.csの中にある特定のワードが置換され出力されるイメージです。
+Template.csの中にある特定のワードが置換され出力されるイメージです。  
 置換処理は次のテーブルを元に行われます。  
 
 | 置換前 | 置換後 |
@@ -81,3 +81,97 @@ Template.csの中にある特定のワードが置換され出力されるイメ
 | PROBLEM_URL | 問題のURL（https://atcoder.jp/contests/Judge-Update-202004/tasks/judge_update_202004_a など） |
 
 Template.csは自分好みに自由に編集できます。
+
+# 出力されるテストファイルについて
+
+サンプルケースを元に下記のようなファイルを生成します。  
+カスタマイズは今の所出来ません。
+
+出力例
+```
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.IO;
+
+namespace ABC100
+{
+    [TestClass]
+    public class ATest
+    {
+        [TestMethod]
+        public void sample_1()
+        {
+            string input =
+@"+-++
+";
+            string output =
+@"2
+";
+            AssertIO(input, output);
+        }
+
+        [TestMethod]
+        public void sample_2()
+        {
+            string input =
+@"-+--
+";
+            string output =
+@"-2
+";
+            AssertIO(input, output);
+        }
+
+        [TestMethod]
+        public void sample_3()
+        {
+            string input =
+@"----
+";
+            string output =
+@"-4
+";
+            AssertIO(input, output);
+        }
+
+
+        private void AssertIO(string input, string output)
+        {
+            Console.SetIn(new StringReader(input));
+            StringWriter writer = new StringWriter();
+            Console.SetOut(writer);
+            A.Program.Main(null);
+            Assert.AreEqual(output + Environment.NewLine, writer.ToString());
+        }
+    }
+
+    [TestClass]
+    public class BTest
+    {
+        [TestMethod]
+        public void sample_1()
+        {
+            string input =
+@"12
+";
+            string output =
+@"Yes
+";
+            AssertIO(input, output);
+        }
+
+        （中略）
+
+        private void AssertIO(string input, string output)
+        {
+            Console.SetIn(new StringReader(input));
+            StringWriter writer = new StringWriter();
+            Console.SetOut(writer);
+            B.Program.Main(null);
+            Assert.AreEqual(output + Environment.NewLine, writer.ToString());
+        }
+    }
+
+    ...
+}
+```
