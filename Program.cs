@@ -81,14 +81,13 @@ TEST_CLASSES
     public class CLASS_NAME
     {
 TEST_METHODS
-
         private void AssertIO(string input, string output)
         {
             Console.SetIn(new StringReader(input));
             StringWriter writer = new StringWriter();
             Console.SetOut(writer);
             PROBLEM_LABEL.Program.Main(null);
-            Assert.AreEqual(output + Environment.NewLine, writer.ToString());
+            Assert.AreEqual(output, writer.ToString());
         }
     }
 ";
