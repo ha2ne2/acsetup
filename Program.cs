@@ -1,4 +1,8 @@
-﻿using System;
+﻿#nullable enable
+
+using CommandLine;
+using CommandLine.Text;
+using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
@@ -15,12 +19,36 @@ namespace acsetup
         {
             if (!File.Exists(AtCoderCliSettingFileName))
             {
-                throw new FileNotFoundException(string.Format("{0} was not found", AtCoderCliSettingFileName));
+                Console.WriteLine("atcoder-cli json was not found.\npath : {0}", AtCoderCliSettingFileName);
+                return;
+            }
+
+            // コマンドラインオプションのパース
+            var parseResult = Parser.Default.ParseArguments<CommandLineOptions>(args);
+            if (parseResult.Tag == ParserResultType.NotParsed)
+            {
+                Console.WriteLine("failed to parse command line option");
+                return;
+            }
+
+            // パース成功時はキャストしたオブジェクトからパース結果が取得可能
+            CommandLineOptions opt = ((Parsed<CommandLineOptions>)parseResult).Value;
+
+            if (!Directory.Exists(opt.TestDest))
+            {
+                Console.WriteLine("TestDestDir was not found.\npath : {0}", opt.TestDest);
+                return;
+            }
+
+            if (!Directory.Exists(opt.TemplateDest))
+            {
+                Console.WriteLine("TemplateDestDir was not found.\npath : {0}", opt.TemplateDest);
+                return;
             }
 
             dynamic jsonData = Parse(File.ReadAllText(AtCoderCliSettingFileName));
-            CreateTestFile(jsonData);
-            CopyTemplate(jsonData);
+            CreateTestFile(jsonData, opt.TestDest);
+            CopyTemplate(jsonData, opt.TemplateDest);
         }
 
         /// <summary>
@@ -29,18 +57,11 @@ namespace acsetup
         static string AtCoderCliSettingFileName = "contest.acc.json";
 
         /// <summary>
-        /// VisualStudio用テストファイルの書き出し先ディレクトリ。
-        /// とりあえずカレントディレクトリに決め打ち。
-        /// 設定ファイルを読むように変える？
-        /// </summary>
-        static string TestFileDir = Environment.CurrentDirectory;
-
-        /// <summary>
         /// テンプレートファイルのパス。
         /// とりあえずexeと同階層に決め打ち。
         /// </summary>
         static string TemplateFilePath = Path.Combine(
-            Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location),
+            Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!,
             "Template.cs");
 
 
@@ -55,20 +76,20 @@ TEST_CLASSES
 }
 ";
 
-        static string TestClasTemplate =
+        static string TestClassTemplate =
 @"    [TestClass]
     public class CLASS_NAME
     {
+TEST_METHODS
+
         private void AssertIO(string input, string output)
         {
             Console.SetIn(new StringReader(input));
             StringWriter writer = new StringWriter();
             Console.SetOut(writer);
-            PROBLEM_NAME.Main(null);
+            PROBLEM_LABEL.Program.Main(null);
             Assert.AreEqual(output + Environment.NewLine, writer.ToString());
         }
-
-TEST_METHODS
     }
 ";
 
@@ -90,15 +111,19 @@ TEST_METHODS
         static Regex NewlinePattern = new Regex(@"\r\n|\r|\n", RegexOptions.Compiled);
 
         /// <summary>
-        /// atcoder-cliでダウンロードしてきたin/outファイルを一つのMSテストのファイルに纏める。
+        /// atcoder-cliでダウンロードしてきたin/outファイルを一つのMSTestのファイルにコンパイルする
         /// </summary>
-        /// <param name="json"></param>
-        static void CreateTestFile(dynamic json)
+        /// <param name="json">
+        /// atcoder-cliがサンプルをDLした際に作られるJSONファイル。
+        /// コンテスト名や問題名、サンプルの保存場所が含まれている。
+        /// </param>
+        /// <param name="destPath">テストファイルの出力先パス</param>
+        static void CreateTestFile(dynamic json, string destPath)
         {
             List<string> classes = new List<string>();
             foreach(var task in json.tasks)
             {
-                string testDirPath = Path.Combine(task.directory.path, task.directory.testdir);
+                string testDirPath = Path.Combine(task!.directory.path, task.directory.testdir);
                 string[] inputFilePaths = Directory.GetFiles(testDirPath, "*.in");
                 string[] outputFilePaths = new string[inputFilePaths.Length];
                 string[] testNames = new string[inputFilePaths.Length];
@@ -128,34 +153,37 @@ TEST_METHODS
                 }
 
                 // テストクラスを生成
-                string label = task.label.ToUpper();
-                string classStr = TestClasTemplate;
-                classStr = classStr.Replace("CLASS_NAME", label + "Test");
-                classStr = classStr.Replace("PROBLEM_NAME", label);
+                string problemLabel = task.label.Replace("-", "_");
+                string classStr = TestClassTemplate;
+                classStr = classStr.Replace("CLASS_NAME", problemLabel + "Test");
+                classStr = classStr.Replace("PROBLEM_LABEL", problemLabel);
                 classStr = classStr.Replace("TEST_METHODS", string.Join("\n", methods));
                 classes.Add(classStr);
             }
             
             // ネームスペースとusingを追加
-            string contestName = json.contest.id.ToUpper();
+            string contestName = json.contest.id.Replace("-", "_");
             string testFileData = TestFileTemplate;
             testFileData = testFileData.Replace("NAME_SPACE", contestName);
             testFileData = testFileData.Replace("TEST_CLASSES", string.Join("\n",classes));
             testFileData = NewlinePattern.Replace(testFileData, "\r\n");
 
-            // ファイルとして書き出す
+            // テストファイルの書き出し処理
             // もしファイルが既に存在していたら上書きする
-            string testFilePath = Path.Combine(TestFileDir, contestName + "Test.cs");
+            string testFilePath = Path.Combine(destPath, contestName + "Test.cs");
             File.WriteAllText(testFilePath, testFileData);
 
             Console.WriteLine($"CREATED : {testFilePath}");
         }
 
         /// <summary>
-        /// 
+        /// 問題毎にテンプレートを作成する。
         /// </summary>
-        /// <param name="json"></param>
-        static void CopyTemplate(dynamic json)
+        /// <param name="json">
+        /// atcoder-cliがサンプルをDLした際に作られるJSONファイル。
+        /// コンテスト名や問題名、サンプルの保存場所が含まれている。
+        /// </param>
+        static void CopyTemplate(dynamic json, string destPath)
         {
             if (!File.Exists(TemplateFilePath))
             {
@@ -164,26 +192,33 @@ TEST_METHODS
 path: {TemplateFilePath}");
             }
 
+            if (!Directory.Exists(destPath))
+            {
+                Directory.CreateDirectory(destPath);
+            }
+
+            string contestName = json.contest.id.Replace("-","_");
+            string contestNameOrig = json.contest.id;
             foreach (var task in json.tasks)
             {
-                string contestName = json.contest.id.ToUpper();
-                string problemName = task.label.ToUpper();
+                string problemLabel = task!.label.Replace("-","_"); // AやBなど
+                string problemTitle = task.title;
+                string problemUrl = task.url;
                 string template = File.ReadAllText(TemplateFilePath);
+                template = template.Replace("CONTEST_NAME_ORIG", contestNameOrig);
                 template = template.Replace("CONTEST_NAME", contestName);
-                template = template.Replace("PROBLEM_NAME", problemName);
+                template = template.Replace("PROBLEM_LABEL", problemLabel);
+                template = template.Replace("PROBLEM_TITLE", problemTitle);
+                template = template.Replace("PROBLEM_URL", problemUrl);
 
-                // 作業ディレクトリに書き込み
-                string filePath = Path.Combine(
-                    Environment.CurrentDirectory,
-                    problemName + ".cs"
-                    );
-
+                // テンプレートファイルの書き出し処理
+                // もしファイルが既に存在していたらスキップする
+                string filePath = Path.Combine(destPath, problemLabel + ".cs");
                 if (File.Exists(filePath))
                 {
                     Console.WriteLine($"SKIPPED (already exists) : {filePath}");
                     continue;
                 }
-
                 File.WriteAllText(filePath, template);
                 Console.WriteLine($"CREATED : {filePath}");
             }
@@ -202,7 +237,7 @@ path: {TemplateFilePath}");
             using var document = JsonDocument.Parse(json);
             return toExpandoObject(document.RootElement);
 
-            object propertyValue(JsonElement elm) =>
+            object? propertyValue(JsonElement elm) =>
                 elm.ValueKind switch
                 {
                     JsonValueKind.Null => null,
@@ -219,7 +254,7 @@ path: {TemplateFilePath}");
                 var exo = new ExpandoObject();
                 foreach(var prop in elm.EnumerateObject())
                 {
-                    ((IDictionary<string,object>)exo).Add(prop.Name, propertyValue(prop.Value));
+                    ((IDictionary<string,object?>)exo).Add(prop.Name, propertyValue(prop.Value));
                 }
                 return exo;
             };
