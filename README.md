@@ -1,6 +1,6 @@
 # これは何？
 C# / Visual Studio / MSTest というニッチな環境向けのAtCoderテストケース自動作成ツールです。  
-コマンド1発でMSTest用のテストファイルとテンプレートを準備してくれます。
+コマンド1発でMSTest用のテストファイルの作成と、問題別のテンプレートを展開をしてくれます。  
 atcoder-cli の WRAPPER なのでWSLのインストールが必要です。
 
 # 準備
@@ -12,7 +12,7 @@ http://tatamo.81.la/blog/2018/12/07/atcoder-cli-installation-guide/
 - atcoder-cliとonline-judge-toolsでAtCoderにログインします。  
   - $ acc login
   - $ oj login https://atcoder.jp/
-- acsetupを好きなフォルダに展開します。
+- acsetupをお好きなフォルダに展開します。
 
 # 使い方
 
@@ -34,21 +34,16 @@ CREATED : .\D.cs
 ```
 
 
-下記コードを実行するとカレントディレクトリにABC101フォルダが作られ、サンプルデータがDLされる。
-また、そのデータを元にMSTest用のテストコードが生成され、指定したフォルダに出力される。
-そして、accsetup.exeと同じディレクトリに存在するTemplate.csが、コンテスト名や問題名の置換処理を経て、指定したフォルダに出力される。  
-
-初回実行時はatcoder-cliがatcoderのログインIDとパスワードを聞いてくる（ローカルにはセッション情報が保存される）。
-```
-$ acsetup ABC101
-```
-
-
-
 # 発展的な使い方
-- .bashrcに下記関数を追加し、フォルダ名を適宜変更する  
---tmpl-destはテンプレートの出力先フォルダを指定  
---test-destはMSTest用のテストファイルの出力先フォルダを指定
+
+サンプルケースのDL、テストファイルの作成、テンプレートの展開、プロジェクトの作成、ソリューションへの追加 ・・・  
+**コマンド1発で全てやりたい！**
+
+
+
+そんな時は.bashrcに下記関数を追加すると出来ます。フォルダ名は適宜変更してください。  
+--tmpl-destはテンプレートの出力先フォルダを指定して下さい  
+--test-destはMSTest用のテストファイルの出力先フォルダを指定して下さい
 
 ```
 function acsetup() {
@@ -66,3 +61,24 @@ function acsetup() {
 }
 ```
 
+
+設定後、.bashrcを再読込すると、下記コマンドでサンプルケースのDLからソリューション関係まですべてやってくれるようになります。
+```
+$ acsetup ABC100
+```
+
+# テンプレートについて
+テンプレートは、acsetupと同じフォルダにあるTemplate.csを元に、置換処理を行って生成します。  
+置換処理は次のテーブルを元に行われます。  
+Template.csの中にある特定のワードが置換され出力されるイメージです。
+
+| 置換前 | 置換後 |
+----|---- 
+| CONTEST_NAME | コンテスト名（ABC100 など）（ハイフンはアンダーバーに置換されます） |
+| CONTEST_NAME_ORIG |  コンテスト名（ABC100 など）（ハイフンはアンダーバーに置換されません） |
+| PROBLEM_LABEL | 問題のラベル（A, B, C など） |
+| PROBLEM_TITLE | 問題のタイトル（Walking Takahashi など）
+| PROBLEM_URL | 問題のURL（https://atcoder.jp/contests/Judge-Update-202004/tasks/judge_update_202004_a など） |
+|
+
+Template.csは自分好みに自由に編集できます。
