@@ -68,9 +68,9 @@ $ acsetup ABC100
 ```
 
 # テンプレートについて
-テンプレートは、acsetupと同じフォルダにあるTemplate.csを元に、置換処理を行って生成します。  
-置換処理は次のテーブルを元に行われます。  
+テンプレートは、acsetupと同じフォルダにあるTemplate.csを元に、置換処理が行われた後出力されます。  
 Template.csの中にある特定のワードが置換され出力されるイメージです。
+置換処理は次のテーブルを元に行われます。  
 
 | 置換前 | 置換後 |
 ----|---- 
@@ -79,6 +79,5 @@ Template.csの中にある特定のワードが置換され出力されるイメ
 | PROBLEM_LABEL | 問題のラベル（A, B, C など） |
 | PROBLEM_TITLE | 問題のタイトル（Walking Takahashi など）
 | PROBLEM_URL | 問題のURL（https://atcoder.jp/contests/Judge-Update-202004/tasks/judge_update_202004_a など） |
-|
 
 Template.csは自分好みに自由に編集できます。
