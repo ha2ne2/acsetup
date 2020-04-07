@@ -2,16 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using static System.Math;
-using static CONTEST_NAME.PROBLEM_LABEL.Cin;
-using static CONTEST_NAME.PROBLEM_LABEL.Util;
+using static CONTEST_ID.TASK_ID.Cin;
+using static CONTEST_ID.TASK_ID.Util;
 using Pair = System.ValueTuple<long, long>;
 
 /// <summary>
-/// CONTEST_NAME_ORIG
-/// PROBLEM_LABEL - PROBLEM_TITLE
-/// PROBLEM_URL
+/// CONTEST_ID_ORIG
+/// TASK_LABEL - TASK_TITLE
+/// TASK_URL
 /// </summary>
-namespace CONTEST_NAME.PROBLEM_LABEL
+namespace CONTEST_ID.TASK_ID
 {
     public class Program
     {

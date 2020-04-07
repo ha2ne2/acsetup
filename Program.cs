@@ -70,15 +70,10 @@ namespace acsetup
 using System;
 using System.IO;
 
-namespace NAME_SPACE
+namespace CONTEST_ID.Tests
 {
-TEST_CLASSES
-}
-";
-
-        static string TestClassTemplate =
-@"    [TestClass]
-    public class CLASS_NAME
+    [TestClass]
+    public class TASK_ID_Test
     {
 TEST_METHODS
         private void AssertIO(string input, string output)
@@ -86,15 +81,16 @@ TEST_METHODS
             Console.SetIn(new StringReader(input));
             StringWriter writer = new StringWriter();
             Console.SetOut(writer);
-            PROBLEM_LABEL.Program.Main(null);
+            TASK_ID.Program.Main(null);
             Assert.AreEqual(output, writer.ToString());
         }
     }
+}
 ";
 
         static string TestMethodTemplate =
 @"        [TestMethod]
-        public void METHOD_NAME()
+        public void TASK_ID_SAMPLE_NAME()
         {
             string input =
 @""INPUT"";
@@ -119,25 +115,31 @@ TEST_METHODS
         /// <param name="destPath">テストファイルの出力先パス</param>
         static void CreateTestFile(dynamic json, string destPath)
         {
-            List<string> classes = new List<string>();
+            string contestIdOrig = json.contest.id;
+            string contestId = json.contest.id.Replace("-","_");
             foreach(var task in json.tasks)
             {
+                string taskLabel = task!.label.Replace("-","_"); // AやBなど
+                string taskId = task.id.Replace("-","_");
+                string taskTitle = task.title;
+                string taskUrl = task.url;
+
                 string testDirPath = Path.Combine(task!.directory.path, task.directory.testdir);
                 string[] inputFilePaths = Directory.GetFiles(testDirPath, "*.in");
                 string[] outputFilePaths = new string[inputFilePaths.Length];
-                string[] testNames = new string[inputFilePaths.Length];
+                string[] sampleNames = new string[inputFilePaths.Length];
                 Array.Sort(inputFilePaths);
 
                 // inputファイルに対応するoutputファイルが存在するかチェックする
                 for (int i = 0; i < inputFilePaths.Length; i++)
                 {
-                    string tmp = Path.GetFileNameWithoutExtension(inputFilePaths[i]);
-                    outputFilePaths[i] = Path.Combine(testDirPath, tmp + ".out");
+                    string sampleNameOrig = Path.GetFileNameWithoutExtension(inputFilePaths[i]);
+                    sampleNames[i] = sampleNameOrig.Replace("-", "_");
+                    outputFilePaths[i] = Path.Combine(testDirPath, sampleNameOrig + ".out");
                     if (!File.Exists(outputFilePaths[i]))
                     {
                         throw new FileNotFoundException("Output file was not found.", outputFilePaths[i]);
                     }
-                    testNames[i] = tmp.Replace("-", "_");
                 }
 
                 // テストメソッドを生成
@@ -145,34 +147,29 @@ TEST_METHODS
                 for (int i = 0; i < inputFilePaths.Length; i++)
                 {
                     string methodStr = TestMethodTemplate;
-                    methodStr = methodStr.Replace("METHOD_NAME", testNames[i]);
+                    methodStr = methodStr.Replace("SAMPLE_NAME", sampleNames[i]);
                     methodStr = methodStr.Replace("INPUT", File.ReadAllText(inputFilePaths[i]));
                     methodStr = methodStr.Replace("OUTPUT", File.ReadAllText(outputFilePaths[i]));
                     methods.Add(methodStr);
                 }
 
                 // テストクラスを生成
-                string problemLabel = task.label.Replace("-", "_");
-                string classStr = TestClassTemplate;
-                classStr = classStr.Replace("CLASS_NAME", problemLabel + "Test");
-                classStr = classStr.Replace("PROBLEM_LABEL", problemLabel);
-                classStr = classStr.Replace("TEST_METHODS", string.Join("\n", methods));
-                classes.Add(classStr);
-            }
-            
-            // ネームスペースとusingを追加
-            string contestName = json.contest.id.Replace("-", "_");
-            string testFileData = TestFileTemplate;
-            testFileData = testFileData.Replace("NAME_SPACE", contestName);
-            testFileData = testFileData.Replace("TEST_CLASSES", string.Join("\n",classes));
-            testFileData = NewlinePattern.Replace(testFileData, "\r\n");
+                string template = TestFileTemplate;
+                template = template.Replace("TEST_METHODS", string.Join("\n", methods));
+                template = template.Replace("CONTEST_ID_ORIG", contestIdOrig);
+                template = template.Replace("CONTEST_ID", contestId);
+                template = template.Replace("TASK_LABEL", taskLabel);
+                template = template.Replace("TASK_ID", taskId);
+                template = template.Replace("TASK_TITLE", taskTitle);
+                template = template.Replace("TASK_URL", taskUrl);
+                template = NewlinePattern.Replace(template, "\r\n");
 
-            // テストファイルの書き出し処理
-            // もしファイルが既に存在していたら上書きする
-            string testFilePath = Path.Combine(destPath, contestName + "Test.cs");
-            File.WriteAllText(testFilePath, testFileData);
-
-            Console.WriteLine($"CREATED : {testFilePath}");
+                // テストファイルの書き出し処理
+                // もしファイルが既に存在していたら上書きする
+                string testFilePath = Path.Combine(destPath, taskId + "_Test.cs");
+                File.WriteAllText(testFilePath, template);
+                Console.WriteLine($"CREATED : {testFilePath}");
+            }           
         }
 
         /// <summary>
@@ -191,28 +188,25 @@ TEST_METHODS
 path: {TemplateFilePath}");
             }
 
-            if (!Directory.Exists(destPath))
-            {
-                Directory.CreateDirectory(destPath);
-            }
-
-            string contestName = json.contest.id.Replace("-","_");
-            string contestNameOrig = json.contest.id;
+            string contestIdOrig = json.contest.id;
+            string contestId = json.contest.id.Replace("-","_");
             foreach (var task in json.tasks)
             {
-                string problemLabel = task!.label.Replace("-","_"); // AやBなど
-                string problemTitle = task.title;
-                string problemUrl = task.url;
+                string taskLabel = task!.label.Replace("-","_"); // AやBなど
+                string taskId = task.id.Replace("-","_");
+                string taskTitle = task.title;
+                string taskUrl = task.url;
                 string template = File.ReadAllText(TemplateFilePath);
-                template = template.Replace("CONTEST_NAME_ORIG", contestNameOrig);
-                template = template.Replace("CONTEST_NAME", contestName);
-                template = template.Replace("PROBLEM_LABEL", problemLabel);
-                template = template.Replace("PROBLEM_TITLE", problemTitle);
-                template = template.Replace("PROBLEM_URL", problemUrl);
+                template = template.Replace("CONTEST_ID_ORIG", contestIdOrig);
+                template = template.Replace("CONTEST_ID", contestId);
+                template = template.Replace("TASK_LABEL", taskLabel);
+                template = template.Replace("TASK_ID", taskId);
+                template = template.Replace("TASK_TITLE", taskTitle);
+                template = template.Replace("TASK_URL", taskUrl);
 
                 // テンプレートファイルの書き出し処理
                 // もしファイルが既に存在していたらスキップする
-                string filePath = Path.Combine(destPath, problemLabel + ".cs");
+                string filePath = Path.Combine(destPath, taskId + ".cs");
                 if (File.Exists(filePath))
                 {
                     Console.WriteLine($"SKIPPED (already exists) : {filePath}");
