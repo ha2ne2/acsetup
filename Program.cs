@@ -30,20 +30,17 @@ namespace acsetup
                 Console.WriteLine("failed to parse command line option");
                 return;
             }
-
-            // パース成功時はキャストしたオブジェクトからパース結果が取得可能
             CommandLineOptions opt = ((Parsed<CommandLineOptions>)parseResult).Value;
 
+            // 引数で指定されたフォルダが存在しない場合は作成する
             if (!Directory.Exists(opt.TestDest))
             {
-                Console.WriteLine("TestDestDir was not found.\npath : {0}", opt.TestDest);
-                return;
+                Directory.CreateDirectory(opt.TestDest);
             }
 
             if (!Directory.Exists(opt.TemplateDest))
             {
-                Console.WriteLine("TemplateDestDir was not found.\npath : {0}", opt.TemplateDest);
-                return;
+                Directory.CreateDirectory(opt.TestDest);
             }
 
             dynamic jsonData = Parse(File.ReadAllText(AtCoderCliSettingFileName));
