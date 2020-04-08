@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using static System.Math;
-using static CONTEST_ID.TASK_ID.Cin;
-using static CONTEST_ID.TASK_ID.Util;
+using static TMPL_DEST_DIR_NAME.TASK_ID.Cin;
+using static TMPL_DEST_DIR_NAME.TASK_ID.Util;
 using Pair = System.ValueTuple<long, long>;
 
 /// <summary>
@@ -11,7 +11,7 @@ using Pair = System.ValueTuple<long, long>;
 /// TASK_LABEL - TASK_TITLE
 /// TASK_URL
 /// </summary>
-namespace CONTEST_ID.TASK_ID
+namespace TMPL_DEST_DIR_NAME.TASK_ID
 {
     public class Program
     {

@@ -42,8 +42,7 @@ namespace acsetup
             {
                 Directory.CreateDirectory(opt.TestDest);
             }
-
-            dynamic jsonData = Parse(File.ReadAllText(AtCoderCliSettingFileName));
+            dynamic jsonData = ParseJson(File.ReadAllText(AtCoderCliSettingFileName));
             CreateTestFile(jsonData, opt.TestDest);
             CopyTemplate(jsonData, opt.TemplateDest);
         }
@@ -67,7 +66,7 @@ namespace acsetup
 using System;
 using System.IO;
 
-namespace CONTEST_ID.Tests
+namespace DEST_DIR_NAME.Tests
 {
     [TestClass]
     public class TASK_ID_Test
@@ -114,6 +113,11 @@ TEST_METHODS
         {
             string contestIdOrig = json.contest.id;
             string contestId = json.contest.id.Replace("-","_");
+            string tmplDestDirName = Path.GetDirectoryName(destPath)!.Replace("-","_");
+            // 1文字目が数字だったら先頭にアンダーバーをつける（VisualStudioと同じ動き）
+            if (int.TryParse(tmplDestDirName[0].ToString(), out _))
+                TemplateFilePath = "_" + tmplDestDirName;
+
             foreach(var task in json.tasks)
             {
                 string taskLabel = task!.label.Replace("-","_"); // AやBなど
@@ -121,7 +125,23 @@ TEST_METHODS
                 string taskTitle = task.title;
                 string taskUrl = task.url;
 
-                string testDirPath = Path.Combine(task!.directory.path, task.directory.testdir);
+                string testDirPath = string.Empty;
+
+                if (((IDictionary<String, object>)task!.directory).ContainsKey("testdir"))
+                {
+                    testDirPath = Path.Combine(task!.directory.path, task.directory.testdir);
+                }
+                else
+                {
+                    // jsonにtestdirの項目がない場合、acsetup1による実行なので./testフォルダの存在をチェックする。
+                    // 存在するならば現在処理中のタスクは対象のタスク。
+                    //（acsetup1を実行するとaccを--no-testで実行するため、JSONにtestdirの項目が作られない。
+                    //  acsetup1は事前にojを使って対象のタスクのフォルダの./testにサンプルIOをDLしているため、
+                    //　そのフォルダが存在しているなら対象のタスクを今処理していると分かる。）（アドホックだなぁ）
+                    testDirPath = Path.Combine(task!.directory.path, "./test");
+                    if (!Directory.Exists(testDirPath))
+                        continue;
+                }
                 string[] inputFilePaths = Directory.GetFiles(testDirPath, "*.in");
                 string[] outputFilePaths = new string[inputFilePaths.Length];
                 string[] sampleNames = new string[inputFilePaths.Length];
@@ -153,6 +173,7 @@ TEST_METHODS
                 // テストクラスを生成
                 string template = TestFileTemplate;
                 template = template.Replace("TEST_METHODS", string.Join("\n", methods));
+                template = template.Replace("TMPL_DEST_DIR_NAME", tmplDestDirName);
                 template = template.Replace("CONTEST_ID_ORIG", contestIdOrig);
                 template = template.Replace("CONTEST_ID", contestId);
                 template = template.Replace("TASK_LABEL", taskLabel);
@@ -187,13 +208,35 @@ path: {TemplateFilePath}");
 
             string contestIdOrig = json.contest.id;
             string contestId = json.contest.id.Replace("-","_");
+            string tmplDestDirName = Path.GetDirectoryName(destPath)!.Replace("-", "_");
+            // 1文字目が数字だったら先頭にアンダーバーをつける（VisualStudioと同じ動き）
+            if (int.TryParse(tmplDestDirName[0].ToString(), out _))
+                TemplateFilePath = "_" + tmplDestDirName;
+
             foreach (var task in json.tasks)
             {
+                if (((IDictionary<String, object>)task!.directory).ContainsKey("testdir"))
+                {
+                    // nop
+                }
+                else
+                {
+                    // jsonにtestdirの項目がない場合、acsetup1による実行なので./testフォルダの存在をチェックする。
+                    // 存在するならば現在処理中のタスクは対象のタスク。
+                    //（acsetup1を実行するとaccを--no-testで実行するため、JSONにtestdirの項目が作られない。
+                    //  acsetup1は事前にojを使って対象のタスクのフォルダの./testにサンプルIOをDLしているため、
+                    //　そのフォルダが存在しているなら対象のタスクを今処理していると分かる。）（アドホックだなぁ）
+                    string testDirPath = Path.Combine(task!.directory.path, "./test");
+                    if (!Directory.Exists(testDirPath))
+                        continue;
+                }
+
                 string taskLabel = task!.label.Replace("-","_"); // AやBなど
                 string taskId = task.id.Replace("-","_");
                 string taskTitle = task.title;
                 string taskUrl = task.url;
                 string template = File.ReadAllText(TemplateFilePath);
+                template = template.Replace("TMPL_DEST_DIR_NAME", tmplDestDirName);
                 template = template.Replace("CONTEST_ID_ORIG", contestIdOrig);
                 template = template.Replace("CONTEST_ID", contestId);
                 template = template.Replace("TASK_LABEL", taskLabel);
@@ -222,7 +265,7 @@ path: {TemplateFilePath}");
         /// </summary>
         /// <param name="json"></param>
         /// <returns></returns>
-        static ExpandoObject Parse(string json)
+        static ExpandoObject ParseJson(string json)
         {
             using var document = JsonDocument.Parse(json);
             return toExpandoObject(document.RootElement);
