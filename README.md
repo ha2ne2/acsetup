@@ -64,7 +64,7 @@ function acprepare() {
     local readonly project_name=$1
 
     # create project
-    dotnet.exe new classlib -o $SOLUTION_DIR/$project_name
+    dotnet.exe new console -o $SOLUTION_DIR/$project_name
 
     # add nuget package to project to test
     dotnet.exe add $SOLUTION_DIR/$project_name package Microsoft.Net.Test.Sdk
