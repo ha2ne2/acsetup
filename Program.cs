@@ -43,30 +43,30 @@ namespace acsetup
                 Directory.CreateDirectory(opt.TestDest);
             }
             dynamic jsonData = ParseJson(File.ReadAllText(AtCoderCliSettingFileName));
-            CreateTestFile(jsonData, opt.TestDest);
             CopyTemplate(jsonData, opt.TemplateDest);
+            CreateTestFile(jsonData, opt.TemplateDest, opt.TestDest);
         }
 
         /// <summary>
         /// atcoder-cli の設定ファイル名
         /// </summary>
-        static string AtCoderCliSettingFileName = "contest.acc.json";
+        static readonly string AtCoderCliSettingFileName = "contest.acc.json";
 
         /// <summary>
         /// テンプレートファイルのパス。
         /// とりあえずexeと同階層に決め打ち。
         /// </summary>
-        static string TemplateFilePath = Path.Combine(
+        static readonly string TemplateFilePath = Path.Combine(
             Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!,
             "Template.cs");
 
 
-        static string TestFileTemplate =
+        static readonly string TestFileTemplate =
 @"using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
 
-namespace DEST_DIR_NAME.Tests
+namespace TMPL_DEST_DIR_NAME.Tests
 {
     [TestClass]
     public class TASK_ID_Test
@@ -84,7 +84,7 @@ TEST_METHODS
 }
 ";
 
-        static string TestMethodTemplate =
+        static readonly string TestMethodTemplate =
 @"        [TestMethod]
         public void TASK_ID_SAMPLE_NAME()
         {
@@ -108,15 +108,15 @@ TEST_METHODS
         /// atcoder-cliがサンプルをDLした際に作られるJSONファイル。
         /// コンテスト名や問題名、サンプルの保存場所が含まれている。
         /// </param>
-        /// <param name="destPath">テストファイルの出力先パス</param>
-        static void CreateTestFile(dynamic json, string destPath)
+        /// <param name="testDestPath">テストファイルの出力先パス</param>
+        static void CreateTestFile(dynamic json,  string tmplDestPath, string testDestPath)
         {
             string contestIdOrig = json.contest.id;
             string contestId = json.contest.id.Replace("-","_");
-            string tmplDestDirName = Path.GetDirectoryName(destPath)!.Replace("-","_");
+            string tmplDestDirName = Path.GetFileName(tmplDestPath.TrimEnd(Path.DirectorySeparatorChar))!.Replace("-", "_");
             // 1文字目が数字だったら先頭にアンダーバーをつける（VisualStudioと同じ動き）
             if (int.TryParse(tmplDestDirName[0].ToString(), out _))
-                TemplateFilePath = "_" + tmplDestDirName;
+                tmplDestDirName = "_" + tmplDestDirName;
 
             foreach(var task in json.tasks)
             {
@@ -184,7 +184,7 @@ TEST_METHODS
 
                 // テストファイルの書き出し処理
                 // もしファイルが既に存在していたら上書きする
-                string testFilePath = Path.Combine(destPath, taskId + "_Test.cs");
+                string testFilePath = Path.Combine(testDestPath, taskId + "_Test.cs");
                 File.WriteAllText(testFilePath, template);
                 Console.WriteLine($"CREATED : {testFilePath}");
             }           
@@ -208,10 +208,10 @@ path: {TemplateFilePath}");
 
             string contestIdOrig = json.contest.id;
             string contestId = json.contest.id.Replace("-","_");
-            string tmplDestDirName = Path.GetDirectoryName(destPath)!.Replace("-", "_");
+            string tmplDestDirName = Path.GetFileName(destPath.TrimEnd(Path.DirectorySeparatorChar))!.Replace("-", "_");
             // 1文字目が数字だったら先頭にアンダーバーをつける（VisualStudioと同じ動き）
             if (int.TryParse(tmplDestDirName[0].ToString(), out _))
-                TemplateFilePath = "_" + tmplDestDirName;
+                tmplDestDirName = "_" + tmplDestDirName;
 
             foreach (var task in json.tasks)
             {
